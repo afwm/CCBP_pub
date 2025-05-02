@@ -71,6 +71,10 @@ jobs:
 
     # --- prepare_build.py の代替: config.json を生成 ---
     - name: Generate config.json from Secrets
+      env:
+        # Secretsを環境変数経由でPowerShellに渡す必要はない
+        # PowerShellスクリプト内で直接 ${{ secrets.VAR_NAME }} を展開できる
+        PYTHONIOENCODING: utf-8
       shell: powershell
       run: |
         # デフォルト設定（ConfigManagerのDEFAULT_CONFIGに相当する部分）
@@ -102,10 +106,6 @@ jobs:
         
         Write-Host "config.json generated successfully:"
         Get-Content config.json
-      env:
-        # Secretsを環境変数経由でPowerShellに渡す必要はない
-        # PowerShellスクリプト内で直接 ${{ secrets.VAR_NAME }} を展開できる
-        PYTHONIOENCODING: utf-8
 
     # --- Nuitka ビルド ---
     - name: Build application with Nuitka
@@ -113,7 +113,7 @@ jobs:
       env:
         USE_CCACHE: 1
         CCACHE_DIR: $env:USERPROFILE/AppData/Local/ccache/Cache # PowerShell形式
-        PATH: "C:\ProgramData\chocolatey\lib\ccache\tools;${{ env.PATH }}"
+        PATH: 'C:\ProgramData\chocolatey\lib\ccache\tools;${{ env.PATH }}' # <- シングルクォートに変更
       run: |
         echo "--- Checking config.json before Nuitka build ---"
         ls -l config.json
