@@ -1,0 +1,69 @@
+[project]
+name = "ccbp"
+version = "1.0.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PySide6>=6.0",
+    "cryptography>=44.0.2",
+    "platformdirs>=4.0.0", # プラットフォーム固有のユーザー設定ディレクトリ用
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.8.0",
+    "pytest>=7.0.0",
+    "pytest-mock>=3.12.0",
+    "ruff>=0.4.4",
+    "Nuitka>=2.6.9",
+]
+
+[tool.mypy]
+mypy_path = "."
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ccbp*"]
+exclude = ["tests*", "assets*"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.nuitka]
+# 基本設定
+# standalone: 依存関係を含めて単一フォルダにまとめる
+# onefile: 単一実行ファイルにする（起動が遅くなる場合あり）
+standalone = true
+# onefile = true # 必要ならこちらを有効化
+
+# パッケージングするメインスクリプト
+main = "main.py"
+
+# PySide6プラグインの有効化（必須）
+enable-plugins = ["pyside6"]
+
+# データファイルのインクルード指定はビルドスクリプト/コマンドラインで行う
+# include-data-dir = [
+#     { source = "assets", destination = "assets" },
+#     { source = "ccbp/resources", destination = "ccbp/resources" }
+# ]
+# もし .ui ファイルがあれば同様に追加:
+# include-data-file = ["path/to/your.ui"]
+
+# 出力ディレクトリやファイル名の指定 (任意)
+# output-dir = "build"
+# output-filename = "CCBP_App"
+
+# macOS特有の設定 (任意)
+macos-create-app-bundle = true
+# macos-app-icon = "assets/icons/app.icns" # アイコンファイルのパスを指定
+# macos-app-name = "CCBP"

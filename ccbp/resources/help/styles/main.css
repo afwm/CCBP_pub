@@ -1,0 +1,61 @@
+/* Basic styles for the help pages */
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 20px;
+    padding: 0;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+h1, h2, h3 {
+    color: #0056b3; /* Blue tone */
+}
+
+header {
+    background-color: #e7f1ff;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+nav ul li {
+    display: inline-block; /* Or block for vertical nav */
+    margin-right: 15px;
+}
+
+nav a {
+    text-decoration: none;
+    color: #0056b3;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+footer {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 0.9em;
+    color: #777;
+}
+
+code {
+    background-color: #eee;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+} 

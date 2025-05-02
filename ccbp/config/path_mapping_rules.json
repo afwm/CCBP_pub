@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "path_rules": [
+    {
+      "id": "material_map_lookup_v1",
+      "description": "Replicates original CapcutHandler path replacement logic using material_map.",
+      "target_keys": [
+        "file_Path",
+        "path",
+        "filePath",
+        "source_path",
+        "relativePath",
+        "url",
+        "font_path"
+      ],
+      "type": "material_map_lookup",
+      "lookup_methods": [
+        {
+          "method": "extra_info",
+          "pattern": "^([a-zA-Z0-9_.-]+)\\.?" 
+        },
+        {
+          "method": "path_stem"
+        },
+        {
+          "method": "field_value",
+          "field": "id"
+        },
+        {
+          "method": "field_value",
+          "field": "local_material_id"
+        },
+        {
+          "method": "type_and_stem" 
+        }
+      ],
+      "enabled": true,
+      "priority": 10
+    }
+  ],
+  "text_rules": [
+    {
+      "id": "hash_placeholder_material_map",
+      "description": "Replaces ##key## placeholders using material_map.",
+      "target_keys": ["text", "content"],
+      "type": "regex_placeholder",
+      "pattern": "##([^#]+)##",
+      "source": "material_map",
+      "enabled": true,
+      "priority": 10
+    },
+    {
+      "id": "curly_placeholder_csv_data",
+      "description": "Replaces {{key}} placeholders using csv_row_data.",
+      "target_keys": ["text", "content"],
+      "type": "regex_placeholder",
+      "pattern": "{{([^}]+)}}",
+      "source": "csv_row_data",
+      "enabled": true,
+      "priority": 20
+    }
+  ],
+  "system_paths_to_ignore": [
+    "/Applications/",
+    "Library/Caches",
+    "Cache/effect",
+    "Library/Fonts",
+    "/System/Library",
+    "/private/var",
+    "/Users/Shared/",
+    "/private/tmp/"
+  ],
+  "json_content_keys": [
+    "content"
+  ]
+} 
