@@ -132,7 +132,7 @@ jobs:
           --include-data-dir=assets=assets `
           --include-data-file=assets/ffmpeg/win/ffmpeg.exe=assets/ffmpeg/win/ffmpeg.exe `
           --include-data-file=assets/ffmpeg/win/ffprobe.exe=assets/ffmpeg/win/ffprobe.exe `
-          --include-data-file=config.json=config.json ` # 生成したconfig.jsonを同梱
+          --include-data-file=config.json=config.json `
           # --include-data-file=qt6.conf=qt6.conf # 不要になったため削除
           --product-name="CapCutBatchProcessor" `
           --company-name="MASHUL-LAB" `
