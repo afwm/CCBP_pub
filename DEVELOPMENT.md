@@ -92,9 +92,8 @@
     # プロジェクトと開発依存をインストール
     python -m pip install -e .[dev]
     ```
-4.  **`.env` ファイルの設定:**
-    `.env.example` をコピーして `.env` ファイルを作成し、以下の環境変数を設定します。これらは主にローカルでの開発・デバッグ時に `scripts/prepare_build.py` が利用する他、一部は直接アプリケーションが参照する可能性があります。
-    *   `LICENSE_SECRET_KEY`: ライセンス署名検証用の秘密鍵
+4.  **.env ファイルの設定:**
+    `.env.example` をコピーして `.env` ファイルを作成し、以下の環境変数を設定します。
     *   `LICENSE_API_URL`: ライセンス認証API (GAS) のデプロイメントURL
     *   `LICENSE_FERNET_KEY`: キャッシュファイル暗号化用のFernetキー (Base64エンコードされた32バイト)
     *   **Fernetキーの生成:** `.env` に設定するキーがない場合、以下のスクリプトで生成できます。
@@ -107,6 +106,7 @@
         ```bash
         python generate_fernet_key.py
         ```
+    *   `.env` ファイルは **絶対にGit管理しないでください**。
 
 ## 5. 主要コンポーネント
 
@@ -127,18 +127,11 @@
 
 ## 6. 設定管理 (`config.json`)
 
-*   アプリケーションの設定は `config.json` ファイルで管理されます。
-*   **保存場所:** 通常、ユーザーのプラットフォームに応じたアプリケーションサポートディレクトリ内に保存されます (`platformdirs` ライブラリを使用)。具体的なパスはログで確認できます。
+*   アプリケーションの設定はビルド時に `.env` から自動生成される `config.json` で管理されます。
 *   **ビルド時の同梱:**
-    *   **macOS:** 現在のローカルビルド (`build_macos.sh`) では、`config.json` は同梱されません。アプリケーション初回実行時にユーザーディレクトリにデフォルト設定で生成されます。パス置換ルール (`path_mapping_rules.json`) やリソースファイル (`ccbp/resources`, `assets/ffmpeg`) は `--include-data-file` や `--include-data-dir` でアプリバンドル内に同梱されます。
-    *   **Windows (GitHub Actions):** ビルドワークフロー内で `scripts/prepare_build.py` が実行され、GitHub Secrets の値を含む `config.json` が生成され、`--include-data-file` オプションによって実行ファイルと同じディレクトリに同梱されます。
-*   **管理項目 (例):**
-    *   `license_api_url`: ライセンス認証APIのURL
-    *   `license_secret_key`: 署名検証用の秘密鍵
-    *   `fernet_key`: キャッシュ暗号化キー
-    *   `cache_path`: キャッシュファイルの保存先ディレクトリパス
-    *   `license_key`: 最後に認証成功したライセンスキー（マスキングなしで保存される点に注意が必要な場合あり）
-    *   その他UI設定など
+    *   **macOS:** `build_macos.sh` 実行時に `.env` から `config.json` が自動生成され、バンドルに同梱されます。
+    *   **Windows:** GitHub ActionsでSecretsから `config.json` が自動生成され、バンドルに同梱されます。
+*   **手動で `config.json` を編集・管理する必要はありません。**
 
 ## 7. ライセンス認証
 
@@ -164,7 +157,6 @@
     *   GAS API 側と Python 側で同じデータと秘密鍵を使って署名を計算し、比較検証。
 *   **Secrets:** GitHub Actions でのビルド時には、以下の Secrets が必要です。
     *   `LICENSE_API_URL`
-    *   `LICENSE_SECRET_KEY`
     *   `LICENSE_FERNET_KEY`
 
 ## 8. ビルド
@@ -172,38 +164,16 @@
 アプリケーションの配布には Nuitka を使用します。
 
 *   **macOS (ローカルビルド):**
-    `build_macos.sh` スクリプトを使用します。このスクリプトは内部で以下の Nuitka コマンドを実行します（詳細はスクリプトファイルを参照）。
-    ```bash
-    # 仮想環境を有効化
-    source .venv/bin/activate
-    # スクリプト実行 (内部で Nuitka が実行される)
-    bash build_macos.sh
-    # 実行
-    open nuitka_dist_macos/CCBP.app # アプリ名が変更されている場合あり
-    ```
-    *   主な Nuitka オプション (`build_macos.sh` 内):
-        *   `--standalone`: 依存関係を同梱。
-        *   `--enable-plugin=pyside6`: PySide6 のためのプラグイン。
-        *   `--macos-create-app-bundle`: `.app` バンドルを作成。
-        *   `--macos-app-icon`: アイコンファイル (`.icns`)。
-        *   `--include-data-file`: 個別ファイル (`ffmpeg`, `path_mapping_rules.json`) を同梱。
-        *   `--include-data-dir`: ディレクトリ (`ccbp/resources`) を同梱。
-        *   `--macos-app-protected-resource`: 各種アクセス許可のリクエスト理由。
+    1. `.env` を用意し、必要な環境変数を記載
+    2. `bash build_macos.sh` を実行（.envからconfig.jsonが自動生成され、バンドルに同梱）
+    3. `nuitka_dist_macos/CCBP.app` を起動
+    - App Bundle形式のみ対応。`--onepackage`/`--onefile`は未サポート。
 *   **Windows (GitHub Actions):**
     *   Workflowファイル: `.github/workflows/windows_build.yml`
-    *   トリガー: `main`, `feature` ブランチへの push、`main` への PR、手動実行。
-    *   実行環境: `windows-latest`
-    *   主な手順:
-        1.  コードチェックアウト
-        2.  Pythonセットアップ
-        3.  依存関係インストール (`pip install -e .[dev]`)
-        4.  `config.json` 生成 (`scripts/prepare_build.py` を実行、Secrets を利用)
-        5.  Nuitkaビルド実行 (`python -m nuitka ...`)
-        6.  成果物 (Artifact) をアップロード (`nuitka_dist_windows/main.dist/`)
-    *   必要な Secrets: `LICENSE_API_URL`, `LICENSE_SECRET_KEY`, `LICENSE_FERNET_KEY`
-    *   Nuitka オプション:
-        *   `--windows-icon-from-ico`: Windows 用アイコン (`.ico`)
-        *   `--windows-disable-console`: コンソール非表示
+    *   Secretsから `config.json` を自動生成し、バンドルに同梱
+    *   Nuitkaでビルドし、成果物をArtifactとしてアップロード
+    *   `nuitka_dist_windows/main.dist/` 以下の実行ファイル一式が成果物
+    - 手動ビルドは推奨されません。CI経由で成果物をダウンロードしてください。
 
 ## 9. コーディングルールと Git ガイドライン
 
@@ -225,10 +195,16 @@
 
 ## 11. 注意点
 
-*   **Qt (PySide6) ライセンス:** PySide6 は LGPLv3 ライセンスの下で提供されています。商用目的でアプリケーションを配布する場合、LGPLv3 の条件（ユーザーによる PySide6 ライブラリのソースコード入手、変更、再リンクの許可など）を遵守するか、The Qt Company から別途商用ライセンスを購入する必要があります。詳細はライセンス条文および専門家にご確認ください。
-*   **Secrets の管理:** APIキー、秘密鍵、Fernetキーは機密情報です。Git リポジトリには直接コミットせず、ローカル開発では `.env` ファイル (Git 管理外)、ビルドでは GitHub Secrets を使用して安全に管理してください。
-*   **エラーハンドリング:** アプリケーション内のエラーハンドリング（特にファイルIO、ネットワーク通信、ライセンス検証関連）は、ユーザー体験向上のために継続的に改善が必要です。
+*   **Secrets の管理:** APIキーやFernetキーは機密情報です。`.env` ファイルやSecretsは**絶対にGitリポジトリにコミットしないでください**。
+*   **`LICENSE_SECRET_KEY` は不要になりました。**
+*   **エラーハンドリング:** ファイルIO、ネットワーク通信、ライセンス検証関連のエラーは、ユーザー体験向上のために継続的に改善が必要です。
 *   **GAS API のデプロイ:** `gas/license_api.gs` を変更した場合、Google Apps Script エディタで新しいバージョンをデプロイする必要があります。
+*   **ビルド成果物:**
+    - macOS: `nuitka_dist_macos/CCBP.app`
+    - Windows: `nuitka_dist_windows/main.dist/` 以下の実行ファイル一式
+*   **ビルド方式:**
+    - macOSはApp Bundle形式のみ。`--onepackage`/`--onefile`は未サポート。
+    - Windowsはstandalone形式でビルドされます。
 
 ## 12. 内部実装の詳細
 
@@ -248,3 +224,10 @@
 ---
 
 *このドキュメントは {YYYY-MM-DD} 時点の情報に基づいています。プロジェクトの進捗に合わせて適宜更新してください。* 
+
+## .envファイル例
+
+```
+LICENSE_API_URL=https://script.google.com/macros/s/xxx/exec
+LICENSE_FERNET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx==
+``` 

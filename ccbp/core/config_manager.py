@@ -41,7 +41,6 @@ KEY_BATCH_OUTPUT_CSV_DIR = "batch/output_csv_dir"
 
 # --- License Related Keys ---
 KEY_LICENSE_API_URL = "license/api_url"
-KEY_LICENSE_SECRET_KEY = "license/secret_key" # Sensitive - consider environment variables
 KEY_LICENSE_FERNET_KEY = "license/fernet_key" # Sensitive - consider environment variables
 # ---------------------------
 
@@ -90,7 +89,6 @@ DEFAULT_CONFIG = {
     KEY_CROP_OUTPUT_DIR: "",
     # Add license keys with defaults
     KEY_LICENSE_API_URL: "", # Set your default API URL here if applicable
-    KEY_LICENSE_SECRET_KEY: "", # Keep empty, prompt user or use env var
     KEY_LICENSE_FERNET_KEY: "", # Keep empty, generate dynamically or use env var
     KEY_INTERNAL_FERNET_KEY: "", # ADDED default for internal key
 }
@@ -204,24 +202,44 @@ class ConfigManager:
         return DEFAULT_CONFIG.copy() # Return a copy to prevent modification
 
     def load(self):
-        """Loads configuration from the JSON file."""
+        """Loads configuration from the JSON file(s) with new priority order."""
+        import sys
         default_config = self._get_default_config()
+        base_config = {}
+        user_config = {}
+        loaded_base = False
+        loaded_user = False
+        # 1. バンドル内config.jsonの探索
+        exe_dir = None
+        if getattr(sys, 'frozen', False):
+            exe_dir = Path(sys.executable).parent
+        else:
+            exe_dir = Path(__file__).parent
+        bundle_config_path = exe_dir / CONFIG_FILENAME
+        if bundle_config_path.exists():
+            try:
+                with open(bundle_config_path, 'r', encoding='utf-8') as f:
+                    base_config = json.load(f)
+                logger.info(f"[ConfigManager] バンドル内config.jsonを読み込み: {bundle_config_path}")
+                loaded_base = True
+            except Exception as e:
+                logger.warning(f"[ConfigManager] バンドル内config.jsonの読み込み失敗: {e}")
+        else:
+            logger.info(f"[ConfigManager] バンドル内config.jsonが見つかりません: {bundle_config_path}")
+        # 2. ユーザー設定の読み込み
         if self.config_file_path.exists():
             try:
                 with open(self.config_file_path, 'r', encoding='utf-8') as f:
-                    loaded_config = json.load(f)
-                # Merge loaded config with defaults (ensures all keys exist)
-                self.config = {**default_config, **loaded_config}
-                logger.info(f"Configuration loaded from {self.config_file_path}")
-            except (json.JSONDecodeError, IOError, TypeError) as e:
-                logger.error(f"Failed to load/parse {self.config_file_path}: {e}. Using defaults.")
-                self.config = default_config
-            except Exception as e: # Catch any other unexpected errors
-                 logger.exception(f"Unexpected error loading config: {e}. Using defaults.")
-                 self.config = default_config
+                    user_config = json.load(f)
+                logger.info(f"[ConfigManager] ユーザー設定config.jsonを読み込み: {self.config_file_path}")
+                loaded_user = True
+            except Exception as e:
+                logger.warning(f"[ConfigManager] ユーザー設定config.jsonの読み込み失敗: {e}")
         else:
-            logger.info(f"{self.config_file_path} not found. Using default configuration.")
-            self.config = default_config
+            logger.info(f"[ConfigManager] ユーザー設定config.jsonが見つかりません: {self.config_file_path}")
+        # 3. マージ
+        self.config = {**default_config, **base_config, **user_config}
+        logger.info(f"[ConfigManager] 設定マージ順序: デフォルト→バンドル→ユーザー。最終設定: {list(self.config.keys())}")
 
     def save(self):
         """Saves the current configuration to the JSON file."""

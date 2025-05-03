@@ -9,8 +9,8 @@ from .config_manager import (
     KEY_INSTALL_DATE,
     KEY_LAST_VALID_DATE,
     KEY_DAILY_BATCH_COUNT,
-    KEY_BATCH_COUNT_DATE
-    # --- End Trial Period Keys ---
+    KEY_BATCH_COUNT_DATE,
+    KEY_LICENSE_API_URL
 )
 import logging
 import os
@@ -28,20 +28,13 @@ class LicenseManager:
     def __init__(self, config_manager: ConfigManager):
         self.logger = logging.getLogger(__name__)
         self.config_manager = config_manager
-        self.api_url = os.getenv("LICENSE_API_URL")
-        self.api_key = os.getenv("LICENSE_SECRET_KEY") # Use LICENSE_SECRET_KEY for the API key
-
+        # API URLはConfigManagerから取得
+        self.api_url = self.config_manager.get(KEY_LICENSE_API_URL)
+        # secret_key関連は完全削除
         if not self.api_url:
-            self.logger.warning("LICENSE_API_URL environment variable not set. License validation via API will fail.")
+            self.logger.warning("ConfigManagerからAPI URLが取得できません。ライセンス認証APIが利用できません。")
         else:
             self.logger.info(f"License validation API URL configured: {self.api_url}")
-
-        if self.api_key:
-            self.logger.info("LICENSE_SECRET_KEY found and will be used for validation requests.")
-        else:
-             self.logger.info("LICENSE_SECRET_KEY not found. Requests will be made without an API key.")
-
-        # Remove Fernet example if not used
         self.logger.info("LicenseManager initialized.")
 
     def _validate_license_api(self, license_key: str) -> dict | None:
@@ -50,17 +43,11 @@ class LicenseManager:
         Returns the response data dictionary if successful and valid format, otherwise None.
         """
         if not self.api_url:
-            self.logger.error("License validation API URL (LICENSE_API_URL) is not configured. Cannot validate key.")
+            self.logger.error("License validation API URL (license/api_url) is not configured. Cannot validate key.")
             return None
-
         params = {'action': 'verify', 'key': license_key}
         headers = {}
-        if self.api_key:
-            headers['Authorization'] = f'Bearer {self.api_key}' # Example: Bearer token
-            self.logger.debug("API Key added to request headers.")
-        else:
-            self.logger.debug("No API Key found, sending request without authentication header.")
-
+        # secret_keyによる認証ヘッダーは廃止
         try:
             self.logger.debug("Sending license validation request:")
             self.logger.debug(f"  URL: {self.api_url}")
@@ -75,35 +62,28 @@ class LicenseManager:
             except json.JSONDecodeError:
                 response_body_log = response.text[:500] + ("..." if len(response.text) > 500 else "")
             self.logger.debug(f"API Response Body: {response_body_log}")
-            
             response.raise_for_status()
-
             if 'application/json' not in response.headers.get('Content-Type', ''):
                  self.logger.error(f"API response was not JSON. Content-Type: {response.headers.get('Content-Type')}")
                  self.logger.error(f"Response text (start): {response.text[:200]}...")
                  return None
-
             data = response.json()
-
             if 'error' in data:
                 self.logger.warning(f"API returned error for key '{license_key[:8]}...': {data['error']}")
                 # --- Update cache on API error --- 
                 self._update_license_cache(license_key, None, error_message=data['error'])
                 # --- End update --- 
                 return None
-
             if 'status' not in data:
                 self.logger.error(f"API response JSON is missing the 'status' key. Data: {data}")
                 # --- Update cache on structure error --- 
                 self._update_license_cache(license_key, None, error_message="API応答形式エラー")
                 # --- End update --- 
                 return None
-
             # --- Update cache on successful validation --- 
             self._update_license_cache(license_key, data)
             # --- End update --- 
             return data
-
         except requests.exceptions.Timeout as e:
             self.logger.error(f"API call timed out: {e}")
             self._update_license_cache(license_key, None, error_message="APIタイムアウト")

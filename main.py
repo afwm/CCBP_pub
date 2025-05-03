@@ -4,6 +4,7 @@ import logging # Import logging
 from dotenv import load_dotenv
 # --- PySide6 Imports ---
 from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtGui import QPalette, QColor
 # --- CCBP Imports ---
 from ccbp.ui.main_window import MainWindow
 from ccbp.utils.logging_config import setup_logging, get_logger
@@ -62,6 +63,25 @@ def main_gui(): # Renamed original main
         logging.getLogger("ccbp.core.config_manager").setLevel(CONFIG_MANAGER_LOG_LEVEL)
 
     app = QApplication(sys.argv)
+
+    # --- ダークモード強制適用 ---
+    app.setStyle("Fusion")
+    dark_palette = QPalette()
+    dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.WindowText, QColor(220, 220, 220))
+    dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
+    dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ToolTipBase, QColor(220, 220, 220))
+    dark_palette.setColor(QPalette.ToolTipText, QColor(220, 220, 220))
+    dark_palette.setColor(QPalette.Text, QColor(220, 220, 220))
+    dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ButtonText, QColor(220, 220, 220))
+    dark_palette.setColor(QPalette.BrightText, QColor(255, 0, 0))
+    dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    dark_palette.setColor(QPalette.HighlightedText, QColor(35, 35, 35))
+    app.setPalette(dark_palette)
+    app.setStyleSheet("QToolTip { color: #dddddd; background-color: #222222; border: 1px solid #666666; }")
 
     # --- Initialize Managers ---
     config_manager = None

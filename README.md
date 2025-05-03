@@ -1,4 +1,4 @@
-e# CapCut Batch Processor
+# CapCut Batch Processor
 
 ## 1. 概要
 
@@ -26,12 +26,21 @@ CSV ファイルで指定された情報（タイトル、テキスト、画像�
 
 ## 4. インストールと起動
 
-1.  **アプリケーションのダウンロード:** GitHub リポジトリの [Releases](https://github.com/afwm/CCBP/releases) ページなど、指定された配布元からご使用の OS に対応したバージョンのアプリケーションファイル（macOS の場合は `.app` または `.dmg`、Windows の場合は `.exe` または `.zip`）をダウンロードします。
-2.  **展開 (必要な場合):** `.zip` や `.dmg` ファイルの場合は、展開またはインストール手順に従ってください。
-3.  **起動:** ダウンロード（または展開/インストール）したアプリケーション (macOS: `CapCutBatchProcessor.app`, Windows: `CapCutBatchProcessor.exe`) をダブルクリックして起動します。
-    *   **初回起動時の注意 (macOS):** ダウンロードしたアプリケーションを開く際にセキュリティ警告が表示される場合があります。「"開発元を検証できないため開けません"」と表示された場合は、アプリケーションを右クリック（または Control キーを押しながらクリック）し、「開く」を選択して、表示されるダイアログで再度「開く」をクリックしてください。
-    *   **初回起動時の注意 (Windows):** SmartScreen フィルターなどで警告が表示される場合があります。詳細情報を表示し、「実行」を選択してください。
-4.  **ライセンス認証:** 初回起動時またはライセンスキャッシュが無効な場合、ライセンスキーの入力を求められます。提供されたライセンスキーを入力して認証を行ってください。
+1.  **.envファイルの準備:** プロジェクトルートに `.env` ファイルを作成し、以下の環境変数を記載してください（例は下記参照）。
+    ```env
+    LICENSE_API_URL=（発行されたAPIエンドポイント）
+    LICENSE_FERNET_KEY=（Fernetキー。Base64で32バイト）
+    ```
+    * `.env` ファイルは **絶対にGit管理しないでください**。
+    * Windows/macOSともに同じ内容でOKです。
+2.  **アプリケーションのビルド:**
+    * macOS: `bash build_macos.sh` を実行（.envから自動でconfig.jsonが生成され、バンドルに同梱されます）
+    * Windows: GitHub Actionsで自動ビルド（Secretsからconfig.jsonが生成され、バンドルに同梱されます）
+3.  **起動:**
+    * macOS: `nuitka_dist_macos/CCBP.app` をダブルクリック
+    * Windows: `nuitka_dist_windows/main.exe` をダブルクリック
+4.  **ライセンス認証:**
+    * 初回起動時またはキャッシュ無効時にライセンスキー入力を求められます。
 
 ## 5. 準備 (重要)
 
@@ -193,13 +202,51 @@ CSV ファイルで指定された情報（タイトル、テキスト、画像�
 
 ## 10. ライセンス
 
-*   **本アプリケーション (CapCutBatchProcessor):** プロプライエタリ ライセンス (All Rights Reserved)。本ソフトウェアの無断複製、改変、再配布を禁止します。
-*   **同梱ライブラリ:** 本アプリケーションは、以下の主要なオープンソースライブラリを利用しています。これらのライブラリにはそれぞれのライセンス条件が適用されます。
-    *   **Qt (PySide6):** LGPLv3 (Lesser General Public License version 3)。ユーザーは LGPLv3 の条件に基づき、PySide6 ライブラリ部分に関する権利（ソースコードへのアクセス、変更、再リンク等）を有します。詳細はこちらをご参照ください: [GNU LGPLv3](https://www.gnu.org/licenses/lgpl-3.0.html)
-    *   その他のライブラリについては、各ライブラリのライセンスをご確認ください。
+*   **本アプリケーション (CapCutBatchProcessor):** プロプライエタリ ライセンス (All Rights Reserved)。
+*   **同梱ライブラリ:** PySide6 (LGPLv3) 他。詳細は各ライブラリのライセンスを参照。
 
-*免責事項: 本ソフトウェアの使用によって生じたいかなる損害についても、開発者は責任を負いません。*
+---
+
+## .envファイル例
+
+```
+LICENSE_API_URL=https://script.google.com/macros/s/xxx/exec
+LICENSE_FERNET_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx==
+```
+
+- `.env` はビルド時に自動で読み込まれ、`config.json` が生成されます。
+- `LICENSE_SECRET_KEY` は不要になりました。
+- Secretsやキー情報は絶対にリポジトリにコミットしないでください。
 
 ## 11. サポート
 
 不具合や要望については、[問題報告の方法、例: GitHub Issues へご連絡ください / または指定の連絡先]。
+
+## ビルド・配布
+
+### macOS（ローカルビルド）
+- `build_macos.sh` を使用し、App Bundle形式（.app）でビルドします。
+- 必要な環境変数は `.env` に記載し、`config.json` はビルド時に自動生成されます。
+- 実行手順：
+  ```bash
+  cp .env.example .env # 必要に応じて
+  bash build_macos.sh
+  # 成果物: nuitka_dist_macos/CCBP.app
+  ```
+
+### Windows（GitHub ActionsによるCIビルド）
+- `.github/workflows/windows_build.yml` でNuitkaビルドを自動化しています。
+- Secrets（`LICENSE_API_URL`, `LICENSE_FERNET_KEY`）から `config.json` を自動生成し、成果物をArtifactとしてアップロードします。
+- 手動ビルドは推奨されません。CI経由で成果物をダウンロードしてください。
+
+### ビルド成果物
+- macOS: `nuitka_dist_macos/CCBP.app`
+- Windows: `nuitka_dist_windows/main.dist/` 以下の実行ファイル一式
+
+### 注意点
+- macOSでは `--onepackage`/`--onefile` は未サポートです。App Bundle形式のみ対応。
+- Windowsでは `--standalone` 形式でビルドされます。
+- `.env` や `config.json` などの機密情報はGit管理しないでください。
+
+## 開発・詳細ドキュメント
+- 詳細な開発手順や設計方針は [DEVELOPMENT.md](DEVELOPMENT.md) を参照してください。
