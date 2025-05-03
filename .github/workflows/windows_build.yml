@@ -26,6 +26,13 @@ jobs:
       run: git lfs pull
       shell: bash
 
+    - name: Check LFS files before build
+      run: |
+        echo "--- Checking assets/ffmpeg/win/ before build ---"
+        ls -lR assets/ffmpeg/win/ || echo "Directory not found"
+        echo "-----------------------------------------------"
+      shell: bash
+
     - name: Check LFS files after pull
       run: |
         echo "--- Checking assets/ffmpeg/win/ after git lfs pull ---"
@@ -147,6 +154,13 @@ jobs:
         Get-ChildItem -Path nuitka_dist_windows/main.dist/ccbp/assets/ffmpeg/win/ | Format-List
         Write-Host "--------------------------------------------------------"
       shell: powershell
+
+    - name: List all files in Nuitka build output
+      run: |
+        echo "--- Listing all files in Nuitka build output ---"
+        ls -lR nuitka_dist_windows/main.dist/ || echo "Build output directory not found"
+        echo "-----------------------------------------------"
+      shell: bash
 
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
