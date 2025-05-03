@@ -127,7 +127,7 @@ conda-bld/
 # Windows
 # -------
 windows/
-*.exe
+!*.exe
 *.bat
 *.cmd
 *.ps1
