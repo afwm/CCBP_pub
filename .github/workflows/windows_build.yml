@@ -141,6 +141,13 @@ jobs:
           main.py
       shell: powershell # Nuitka コマンドも PowerShell で実行
 
+    - name: Check ffmpeg/ffprobe in build output
+      run: |
+        Write-Host "--- Checking ffmpeg/ffprobe in Nuitka build output ---"
+        Get-ChildItem -Path nuitka_dist_windows/main.dist/ccbp/assets/ffmpeg/win/ | Format-List
+        Write-Host "--------------------------------------------------------"
+      shell: powershell
+
     - name: Upload Windows artifact
       uses: actions/upload-artifact@v4
       with:
