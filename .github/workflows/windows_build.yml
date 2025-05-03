@@ -114,30 +114,30 @@ jobs:
         CCACHE_DIR: $env:USERPROFILE/AppData/Local/ccache
         PATH: 'C:\ProgramData\chocolatey\lib\ccache\tools;${{ env.PATH }}'
       run: |
-        echo "--- Checking config.json before Nuitka build ---"
-        ls -l config.json
-        cat config.json # For debugging
-        echo "-------------------------------------------------"
+        Write-Host "--- Checking config.json before Nuitka build ---"
+        Get-ChildItem -Path config.json | Format-List
+        Get-Content config.json # For debugging
+        Write-Host "-------------------------------------------------"
         
-        python -m nuitka \
-          --standalone \
-          --output-dir=nuitka_dist_windows \
-          --remove-output \
-          --windows-icon-from-ico=assets/icons/app.ico \
-          --enable-plugin=pyside6 \
-          --include-package=ccbp \
-          --include-package=PySide6 \
-          --include-qt-plugins=all \
-          --include-data-dir=assets=assets \
-          --include-data-file=assets/ffmpeg/win/ffmpeg.exe=assets/ffmpeg/win/ffmpeg.exe \
-          --include-data-file=assets/ffmpeg/win/ffprobe.exe=assets/ffmpeg/win/ffprobe.exe \
-          --include-data-file=config.json=config.json \
-          --product-name="CapCutBatchProcessor" \
-          --company-name="MASHUP-LAB" \
-          --product-version="1.0.0" \
-          --file-version="1.0.0" \
-          --assume-yes-for-downloads \
-          --follow-imports \
+        python -m nuitka `
+          --standalone `
+          --output-dir=nuitka_dist_windows `
+          --remove-output `
+          --windows-icon-from-ico=assets/icons/app.ico `
+          --enable-plugin=pyside6 `
+          --include-package=ccbp `
+          --include-package=PySide6 `
+          --include-qt-plugins=all `
+          --include-data-dir=assets=assets `
+          --include-data-file=assets/ffmpeg/win/ffmpeg.exe=assets/ffmpeg/win/ffmpeg.exe `
+          --include-data-file=assets/ffmpeg/win/ffprobe.exe=assets/ffmpeg/win/ffprobe.exe `
+          --include-data-file=config.json=config.json `
+          --product-name="CapCutBatchProcessor" `
+          --company-name="MASHUP-LAB" `
+          --product-version="1.0.0" `
+          --file-version="1.0.0" `
+          --assume-yes-for-downloads `
+          --follow-imports `
           main.py
       shell: powershell # Nuitka コマンドも PowerShell で実行
 
