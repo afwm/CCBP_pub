@@ -139,6 +139,9 @@ windows/
 .AppleDouble
 .LSOverride
 ._*
+# Allow specific exe files needed for the project (tracked by LFS)
+!assets/ffmpeg/win/ffmpeg.exe
+!assets/ffmpeg/win/ffprobe.exe
 
 # Thumbnails
 .Spotlight-V100
