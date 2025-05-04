@@ -63,6 +63,15 @@ ENCRYPTED_CONFIG_KEYS = {
 }
 # --- End Define --- 
 
+# --- Keys to Exclude from User Save ---
+# These keys are typically set during build and should not be overwritten by user config
+KEYS_TO_EXCLUDE_FROM_USER_SAVE = {
+    KEY_LICENSE_API_URL,
+    KEY_LICENSE_FERNET_KEY, 
+    # Add KEY_INTERNAL_FERNET_KEY if it should also be excluded from user save
+}
+# --- End Exclude --- 
+
 APP_NAME = "CCBP" # Define your application name here
 CONFIG_FILENAME = "config.json"
 
@@ -269,19 +278,32 @@ class ConfigManager:
         logger.info(f"[ConfigManager] Config loaded. Sources: {', '.join(source_log)}. Final keys: {merged_keys}")
 
     def save(self):
-        """Saves the current configuration to the JSON file."""
+        """Saves the current configuration to the user's JSON file, excluding sensitive build-time keys."""
         try:
             # Ensure the directory exists before saving
             self.config_file_path.parent.mkdir(parents=True, exist_ok=True) 
-            # Use a temporary dictionary to avoid modifying self.config directly during iteration if needed
+
+            # Create a copy to modify for saving
             config_to_save = self.config.copy()
+
+            # --- ADDED: Exclude specific keys before saving to user config ---
+            excluded_keys = []
+            for key in KEYS_TO_EXCLUDE_FROM_USER_SAVE:
+                if key in config_to_save:
+                    del config_to_save[key]
+                    excluded_keys.append(key)
+            if excluded_keys:
+                logger.debug(f"Excluding keys from user config save: {excluded_keys}")
+            # --- END ADDED ---
+
             with open(self.config_file_path, 'w', encoding='utf-8') as f:
                 json.dump(config_to_save, f, indent=4, ensure_ascii=False)
-            logger.info(f"Configuration saved to {self.config_file_path}")
+            logger.info(f"User configuration saved to {self.config_file_path}") # Clarify this is USER config
+
         except IOError as e:
-            logger.error(f"Failed to save configuration to {self.config_file_path}: {e}")
+            logger.error(f"Failed to save user configuration to {self.config_file_path}: {e}")
         except Exception as e: # Catch any other unexpected errors
-            logger.exception(f"Unexpected error saving config: {e}")
+            logger.exception(f"Unexpected error saving user config: {e}")
 
     def get(self, key: str, default=None):
         """Gets a configuration value, decrypting if necessary."""
