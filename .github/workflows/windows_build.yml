@@ -136,8 +136,8 @@ jobs:
           --include-package=PySide6 `
           --include-qt-plugins=all `
           --include-data-dir=assets=assets `
-          --include-data-file=assets/ffmpeg/win/ffmpeg.exe=assets/ffmpeg/win/ffmpeg.exe `
-          --include-data-file=assets/ffmpeg/win/ffprobe.exe=assets/ffmpeg/win/ffprobe.exe `
+          --include-data-file=assets/ffmpeg/win/ffmpeg.exe=ccbp/assets/ffmpeg/win/ffmpeg.exe `
+          --include-data-file=assets/ffmpeg/win/ffprobe.exe=ccbp/assets/ffmpeg/win/ffprobe.exe `
           --include-data-file=config.json=config.json `
           --product-name="CapCutBatchProcessor" `
           --company-name="MASHUP-LAB" `
