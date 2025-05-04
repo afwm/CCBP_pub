@@ -213,76 +213,77 @@ class ConfigManager:
 
     def load(self):
         """Loads configuration from the JSON file(s) with new priority order."""
-        import sys
-        from pathlib import Path
-        logger.info(f"[ConfigManager] sys.frozen = {getattr(sys, 'frozen', False)}")
-        logger.info(f"[ConfigManager] sys.executable = {sys.executable}")
-        logger.info(f"[ConfigManager] Path.cwd() = {Path.cwd()}")
         default_config = self._get_default_config()
         base_config = {}
         user_config = {}
         loaded_base = False
         loaded_user = False
         is_frozen = getattr(sys, 'frozen', False)
-        # Nuitkaバンドル時の特殊判定
-        if not is_frozen:
-            exe_path = Path(sys.executable)
-            if "main.app" in str(exe_path) and "Contents/MacOS" in str(exe_path):
-                logger.info("[ConfigManager] Nuitka bundle detected by sys.executable path. Forcing is_frozen=True.")
-                is_frozen = True
         logger.debug(f"[ConfigManager] Environment check: sys.frozen = {is_frozen}")
 
         # 1. Determine the path for the bundled config file
         bundle_config_path = None
-        if is_frozen:
-            # Bundled environment
-            logger.debug(f"[ConfigManager] Running bundled (sys.frozen=True).")
-            bundle_config_path = None
-            try:
-                exe_path = Path(sys.executable).resolve()
-                base_dir = exe_path.parent # e.g., Contents/MacOS
-                # Construct the *only* expected path based on Nuitka build command
-                expected_path = base_dir / "ccbp" / "core" / CONFIG_FILENAME
-                logger.info(f"[ConfigManager] Checking the expected bundled config path: {expected_path}")
+        determined_bundle_path = None # Store the first path we intend to check
+        try:
+            # --- First, always try path relative to the executable ---
+            # This handles both frozen executables and running the bundled python.exe
+            exe_path = Path(sys.executable).resolve()
+            exe_dir = exe_path.parent
+            logger.debug(f"[ConfigManager] Checking near executable: {exe_path}")
 
-                if expected_path.exists():
-                    bundle_config_path = expected_path
-                    logger.info(f"[ConfigManager] Found bundled config at the expected location.")
+            if sys.platform == "darwin" and is_frozen:
+                # On macOS .app bundles, data files are typically in Contents/Resources
+                potential_resources_dir = exe_dir.parent / "Resources"
+                if potential_resources_dir.is_dir():
+                     determined_bundle_path = potential_resources_dir / CONFIG_FILENAME
+                     logger.debug(f"[ConfigManager] macOS bundle detected. Determined Resources path: {determined_bundle_path}")
                 else:
-                    # Log more details if not found
-                    logger.error(f"[ConfigManager] CRITICAL: Bundled config *NOT FOUND* at the expected path: {expected_path}")
-                    # Check if parent directories exist and list contents for debugging
-                    if not base_dir.exists():
-                        logger.error(f"Base directory does not exist: {base_dir}")
-                    else:
-                        ccbp_dir = base_dir / "ccbp"
-                        if not ccbp_dir.exists():
-                            logger.error(f"ccbp directory does not exist: {ccbp_dir}")
-                            logger.error(f"Contents of base_dir ({base_dir}): {list(base_dir.iterdir())}")
-                        else:
-                            core_dir = ccbp_dir / "core"
-                            if not core_dir.exists():
-                                logger.error(f"core directory does not exist: {core_dir}")
-                                logger.error(f"Contents of ccbp_dir ({ccbp_dir}): {list(ccbp_dir.iterdir())}")
-                            else:
-                                logger.error(f"Contents of core_dir ({core_dir}): {list(core_dir.iterdir())}")
+                     determined_bundle_path = exe_dir / CONFIG_FILENAME # Fallback
+                     logger.warning(f"[ConfigManager] macOS bundle structure not standard? Determined exe dir path: {determined_bundle_path}")
+            else:
+                # Windows/Linux standalone OR running bundled python.exe: Check alongside executable
+                determined_bundle_path = exe_dir / CONFIG_FILENAME
+                logger.debug(f"[ConfigManager] Checking executable directory path: {determined_bundle_path}")
 
+            # Check if the primary path exists
+            if determined_bundle_path and determined_bundle_path.exists():
+                 bundle_config_path = determined_bundle_path # Use this path
+            # --- If primary path not found AND not frozen, try dev path as fallback --- 
+            elif not is_frozen:
+                 logger.debug(f"[ConfigManager] Bundled config not found near executable ({determined_bundle_path}). Trying development path assumption.")
+                 # Development environment fallback: Assume project root is 2 levels above this file
+                 try:
+                     project_root = Path(__file__).resolve().parents[2]
+                     dev_bundle_path = project_root / CONFIG_FILENAME
+                     logger.debug(f"[ConfigManager] Running from source assumption. Checking project root path: {dev_bundle_path}")
+                     # Only use the dev path if it actually exists
+                     if dev_bundle_path.exists():
+                          bundle_config_path = dev_bundle_path # Use the dev path
+                          logger.info(f"[ConfigManager] Found config via development path: {bundle_config_path}")
+                     else:
+                          logger.warning(f"[ConfigManager] Development path config not found either: {dev_bundle_path}")
+                          # Keep determined_bundle_path (which is None or non-existent) for logging below
+                          bundle_config_path = determined_bundle_path
+                 except IndexError:
+                      logger.error("[ConfigManager] Cannot determine project root from __file__ for dev path.")
+                      bundle_config_path = determined_bundle_path # Keep original for logging
+                 except Exception as dev_e:
+                      logger.error(f"[ConfigManager] Error calculating development path: {dev_e}", exc_info=True)
+                      bundle_config_path = determined_bundle_path # Keep original for logging
+            else:
+                # If frozen and not found at primary path, bundle_config_path remains None or non-existent path
+                bundle_config_path = determined_bundle_path
 
-            except Exception as e:
-                 logger.exception(f"[ConfigManager] Unexpected error determining/checking bundled config path: {e}")
+        except Exception as e:
+            logger.error(f"[ConfigManager] Error determining bundled config path: {e}", exc_info=True)
+            # Attempt fallback to CWD if path determination failed completely
+            if bundle_config_path is None:
+                 bundle_config_path = Path.cwd() / CONFIG_FILENAME
+                 logger.warning(f"[ConfigManager] Falling back to CWD for bundled config path: {bundle_config_path}")
 
-            # No else block needed here for NameError if we simplify
+        logger.info(f"[ConfigManager] Final path determined for bundled config check: {bundle_config_path}") # Log the path we WILL check
 
-        else: # is_frozen is False
-            # Development environment
-            bundle_config_path = Path.cwd() / CONFIG_FILENAME
-            logger.debug(f"[ConfigManager] Running from source (sys.frozen=False). Checking CWD path: {bundle_config_path}")
-
-        # --- Loading Logic (after path determination) ---
-        # Note: This part replaces the original loading block after path finding
-        loaded_base = False # Reset flag
-        base_config = {}    # Reset dict
-
+        # 2. Try loading bundled config (using the determined bundle_config_path)
         if bundle_config_path and bundle_config_path.exists():
             try:
                 with open(bundle_config_path, 'r', encoding='utf-8') as f:
@@ -292,18 +293,20 @@ class ConfigManager:
                     base_config = json.load(f)
                 logger.info(f"[ConfigManager] Successfully loaded bundled config from: {bundle_config_path}")
                 loaded_base = True
+                # ADDED: Log the API URL loaded from bundle if present
                 if KEY_LICENSE_API_URL in base_config:
-                     logger.info(f"[ConfigManager] API URL found in bundled config: '{base_config.get(KEY_LICENSE_API_URL)}'")
+                     logger.info(f"[ConfigManager] API URL found in bundled config: '{base_config.get(KEY_LICENSE_API_URL)}'") # Use get for safety
                 else:
                      logger.warning(f"[ConfigManager] '{KEY_LICENSE_API_URL}' not found in the loaded bundled config.")
+                # END ADDED
             except Exception as e:
                 logger.warning(f"[ConfigManager] Failed to read/parse bundled config file: {bundle_config_path} - {e}", exc_info=True)
-        elif bundle_config_path: # Path was determined but file doesn't exist (already logged error)
-             pass # Error logged above
-        else: # Path could not be determined (already logged error)
-             pass # Error logged above
+        elif bundle_config_path:
+            logger.error(f"[ConfigManager] CRITICAL: Bundled config file *NOT FOUND* at expected location: {bundle_config_path}") # More critical logging
+        else:
+             logger.error("[ConfigManager] CRITICAL: Could not determine a valid path for the bundled config file.")
 
-        # Load user config (no changes needed here)
+        # 3. Load user config
         user_config = {}
         loaded_user = False
         logger.debug(f"[ConfigManager] Attempting to load user config from: {self.config_file_path}")
