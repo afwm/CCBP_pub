@@ -183,7 +183,7 @@ class BatchController(QObject):
         if not self.view:
             return
         start_dir = self.config_manager.get(KEY_BATCH_REPLACE_MATERIAL_DIR, str(Path.home()))
-        dir_path = QFileDialog.getExistingDirectory(self.view, "差し替え素材フォルダを選択", start_dir)
+        dir_path = QFileDialog.getExistingDirectory(self.view, "リプレイス素材フォルダを選択", start_dir)
         if dir_path:
             self.view.change_material_base_edit.setText(dir_path)
             self.config_manager.set(KEY_BATCH_REPLACE_MATERIAL_DIR, dir_path)

@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
     QGroupBox, QHBoxLayout, QSpacerItem, QSizePolicy
 )
-from PySide6.QtCore import Slot, Signal
+from PySide6.QtCore import Slot, Signal, QSize
 from ccbp.core.config_manager import (
     KEY_WORKING_DIRECTORY,
     KEY_LICENSE_KEY,
@@ -12,6 +12,8 @@ from ccbp.core.config_manager import (
     # KEY_PREVIEW_SAVE_DIR
 )
 import logging
+# Import common style
+from .styles import BUTTON_STYLE
 
 class SettingsTabView(QWidget):
     """UI View for the Settings Tab."""
@@ -45,7 +47,11 @@ class SettingsTabView(QWidget):
         self.working_dir_edit = QLineEdit()
         self.working_dir_edit.setPlaceholderText("作業用のベースフォルダを選択")
         self.browse_working_dir_button = QPushButton("参照...")
+        self.browse_working_dir_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_working_dir_button.setFixedSize(QSize(100, 32)) # Set fixed size
         self.create_folders_button = QPushButton("デフォルトフォルダ作成")
+        self.create_folders_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.create_folders_button.setFixedSize(QSize(160, 32)) # Set fixed size
         self.create_folders_button.setEnabled(False) # Initially disabled
 
         grid_layout.addWidget(self.working_dir_label, 0, 0)
@@ -62,9 +68,11 @@ class SettingsTabView(QWidget):
         self.license_key_label = QLabel("ライセンスキー:")
         self.license_key_edit = QLineEdit()
         self.license_key_edit.setPlaceholderText("ライセンスキーを入力")
-        self.license_key_edit.setEchoMode(QLineEdit.EchoMode.Password) # Hide key
-        self.check_license_button = QPushButton("認証確認") # Added check button
-        self.license_status_label = QLabel("状態: 未確認") # Changed default status
+        self.license_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.check_license_button = QPushButton("認証確認")
+        self.check_license_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.check_license_button.setFixedSize(QSize(100, 32)) # Change size to match browse button
+        self.license_status_label = QLabel("状態: 未確認")
         self.progress_label = QLabel("認証中...") # Added progress label
         self.progress_label.setVisible(False) # Initially hidden
         self.progress_label.setStyleSheet("color: gray;") # Style for progress
@@ -83,8 +91,12 @@ class SettingsTabView(QWidget):
 
         # --- Button Layout ---
         button_layout = QHBoxLayout()
-        self.reset_button = QPushButton("設定をリセット")
+        self.reset_button = QPushButton("設定リセット")
+        self.reset_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.reset_button.setFixedSize(QSize(160, 32)) # Set fixed size
         self.clear_license_button = QPushButton("ライセンス情報クリア")
+        self.clear_license_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.clear_license_button.setFixedSize(QSize(160, 32)) # Set fixed size
         # --- Remove Save Button --- 
         # self.save_button = QPushButton("設定を保存")
         # --- End Remove ---
@@ -180,7 +192,7 @@ class SettingsTabView(QWidget):
         }
         return settings
 
-    @Slot(str)
+    @Slot(str, bool)
     def set_license_status(self, status: str, is_valid: bool | None = None):
         """Updates the license status label and its appearance."""
         self.license_status_label.setText(f"状態: {status}") # Keep "状態:" prefix

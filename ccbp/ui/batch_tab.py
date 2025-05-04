@@ -2,10 +2,11 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QGroupBox, 
     QLabel, QLineEdit, QPushButton, QProgressBar, QTextEdit, 
-    QApplication, QFileDialog # SizePolicy removed
+    QApplication, QFileDialog
 )
-# Qt removed
-# from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize # Import QSize for fixed size
+# Import common style
+from .styles import BUTTON_STYLE
 
 # Assuming KEY constants are defined in config_manager, 
 # but the view itself doesn't need direct access to them.
@@ -25,33 +26,45 @@ class BatchTabView(QWidget):
         main_layout = QVBoxLayout(self)
 
         # --- Paths Group --- 
-        path_group = QGroupBox("バッチ処理パス設定")
+        path_group = QGroupBox("ファイル・フォルダのパス設定")
         path_layout = QGridLayout()
 
         # Widgets for each path (Label, LineEdit, Button)
-        self.csv_path_label = QLabel("CSVファイル:")
+        self.csv_path_label = QLabel("差し替えCSVファイルの指定:")
         self.csv_path_edit = QLineEdit()
         self.browse_csv_button = QPushButton("参照...")
+        self.browse_csv_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_csv_button.setFixedSize(QSize(100, 32)) # Set fixed size (Adjust height based on padding)
 
-        self.template_project_path_label = QLabel("テンプレートプロジェクト:")
+        self.template_project_path_label = QLabel("テンプレートプロジェクトフォルダ:")
         self.template_project_path_edit = QLineEdit()
         self.browse_template_project_button = QPushButton("参照...")
+        self.browse_template_project_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_template_project_button.setFixedSize(QSize(100, 32)) # Set fixed size
 
-        self.template_material_base_label = QLabel("テンプレート素材ベース:")
+        self.template_material_base_label = QLabel("テンプレート素材フォルダ:")
         self.template_material_base_edit = QLineEdit()
         self.browse_template_material_button = QPushButton("参照...")
+        self.browse_template_material_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_template_material_button.setFixedSize(QSize(100, 32)) # Set fixed size
 
-        self.change_material_base_label = QLabel("差し替え素材ベース (オプション):")
+        self.change_material_base_label = QLabel("リプレイス素材フォルダ:")
         self.change_material_base_edit = QLineEdit()
         self.browse_change_material_button = QPushButton("参照...")
+        self.browse_change_material_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_change_material_button.setFixedSize(QSize(100, 32)) # Set fixed size
 
-        self.output_projects_dir_label = QLabel("プロジェクト出力先:")
+        self.output_projects_dir_label = QLabel("生成プロジェクト出力先フォルダ:")
         self.output_projects_dir_edit = QLineEdit()
         self.browse_output_projects_button = QPushButton("参照...")
+        self.browse_output_projects_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_output_projects_button.setFixedSize(QSize(100, 32)) # Set fixed size
 
-        self.output_csv_dir_label = QLabel("レポートCSV出力先:")
+        self.output_csv_dir_label = QLabel("レポートCSVの出力先フォルダ:")
         self.output_csv_dir_edit = QLineEdit()
         self.browse_output_csv_button = QPushButton("参照...")
+        self.browse_output_csv_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.browse_output_csv_button.setFixedSize(QSize(100, 32)) # Set fixed size
 
         # Add widgets to grid layout
         row = 0
@@ -85,9 +98,13 @@ class BatchTabView(QWidget):
 
         # --- Action Buttons --- 
         action_layout = QHBoxLayout()
-        self.run_batch_button = QPushButton("バッチ処理実行")
+        self.run_batch_button = QPushButton("バッチ処理")
+        self.run_batch_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.run_batch_button.setFixedSize(QSize(140, 32)) # Set fixed size
         self.cancel_batch_button = QPushButton("中止")
-        self.cancel_batch_button.setEnabled(False) # Initially disabled
+        self.cancel_batch_button.setStyleSheet(BUTTON_STYLE) # Apply style
+        self.cancel_batch_button.setFixedSize(QSize(140, 32)) # Set fixed size
+        self.cancel_batch_button.setEnabled(False) # Initially disabled (style handles appearance)
         action_layout.addStretch(1)
         action_layout.addWidget(self.cancel_batch_button)
         action_layout.addWidget(self.run_batch_button)
@@ -143,13 +160,14 @@ class BatchTabView(QWidget):
         QApplication.processEvents() 
 
     def set_buttons_enabled(self, run_enabled: bool, cancel_enabled: bool):
-        """Enables or disables the Run and Cancel buttons."""
+        """Enables or disables the Run and Cancel buttons. Stylesheet handles appearance."""
+        # Stylesheets are now set in _init_ui and handle disabled state via :disabled pseudo-class
         self.run_batch_button.setEnabled(run_enabled)
         self.cancel_batch_button.setEnabled(cancel_enabled)
 
     # --- Browse Button Slots --- (Implementations using QFileDialog) ---
     def _browse_csv_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "CSVファイルを選択", "", "CSV Files (*.csv);;All Files (*)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "差し替えCSVファイルを選択", "", "CSV Files (*.csv);;All Files (*)")
         if file_path:
             self.csv_path_edit.setText(file_path)
 
@@ -164,12 +182,12 @@ class BatchTabView(QWidget):
             self.template_material_base_edit.setText(dir_path)
             
     def _browse_replace_material_folder(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "差し替え素材フォルダを選択")
+        dir_path = QFileDialog.getExistingDirectory(self, "リプレイス素材フォルダを選択")
         if dir_path:
             self.change_material_base_edit.setText(dir_path)
 
     def _browse_output_folder(self):
-        dir_path = QFileDialog.getExistingDirectory(self, "出力先フォルダを選択")
+        dir_path = QFileDialog.getExistingDirectory(self, "生成プロジェクト出力先フォルダを選択")
         if dir_path:
             self.output_projects_dir_edit.setText(dir_path)
 

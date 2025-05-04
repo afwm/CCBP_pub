@@ -168,13 +168,12 @@ class SettingsController(QObject):
 
         # Define folders to create within workspace - Use names based on old controller
         folders_to_create = [
-            "TemplateMaterial",
-            "ChangeMaterial",
-            "CropOutput",
-            "CsvOutput",
-            # "PreviewImage", # Removed as requested
-            "VideoOutput",
-            "Logs" # Keep Logs or add based on actual need
+            "01_TemplateMaterial",
+            "02_ReplaceMaterial",
+            "03_CropInput",
+            "04_CropOutput",
+            "05_ReportCsvOutput",
+            "06_Logs"
         ]
 
         created_folders = []
@@ -227,7 +226,7 @@ class SettingsController(QObject):
             return
 
         reply = QMessageBox.question(self.view, "確認",
-                                     "ライセンス情報を除く全てのパス設定などをデフォルト値にリセットしますか？\n（バッチ処理タブ、動画切り出しタブの設定もリセットされます）",
+                                     "ライセンス情報を除く全てのパス設定などをデフォルト値にリセットしますか？\n（バッチ処理タブ、クロップ処理タブの設定もリセットされます）",
                                      QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
                                      QMessageBox.StandardButton.No)
         
