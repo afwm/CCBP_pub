@@ -139,6 +139,7 @@ jobs:
           --include-data-file=assets/ffmpeg/win/ffmpeg.exe=ccbp/assets/ffmpeg/win/ffmpeg.exe `
           --include-data-file=assets/ffmpeg/win/ffprobe.exe=ccbp/assets/ffmpeg/win/ffprobe.exe `
           --include-data-file=config.json=config.json `
+          --windows-disable-console `
           --product-name="CapCutBatchProcessor" `
           --company-name="MASHUP-LAB" `
           --product-version="1.0.0" `
