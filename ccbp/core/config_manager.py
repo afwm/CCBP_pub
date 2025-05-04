@@ -203,19 +203,30 @@ class ConfigManager:
 
     def load(self):
         """Loads configuration from the JSON file(s) with new priority order."""
-        import sys
+        # import sys # Removed from here as it's imported at the top
         default_config = self._get_default_config()
         base_config = {}
         user_config = {}
         loaded_base = False
         loaded_user = False
-        # 1. バンドル内config.jsonの探索
+        
+        # 1. バンドル内config.jsonの探索パス決定
         exe_dir = None
         if getattr(sys, 'frozen', False):
+            # バンドル環境: exeのあるディレクトリ
             exe_dir = Path(sys.executable).parent
         else:
-            exe_dir = Path(__file__).parent
-        bundle_config_path = exe_dir / CONFIG_FILENAME
+            # 開発環境: プロジェクトルートを探す
+            # config_manager.py から見て2つ上のディレクトリをプロジェクトルートと想定
+            project_root = Path(__file__).resolve().parents[2]
+            exe_dir = project_root # 開発時はプロジェクトルートを基準にする
+        
+        # デバッグ用に決定されたパスを出力
+        logger.debug(f"[ConfigManager] Base directory for bundled config: {exe_dir}")
+
+        bundle_config_path = exe_dir / CONFIG_FILENAME # config.jsonへのパス
+
+        # 2. バンドル内設定の読み込み試行
         if bundle_config_path.exists():
             try:
                 with open(bundle_config_path, 'r', encoding='utf-8') as f:
@@ -223,10 +234,16 @@ class ConfigManager:
                 logger.info(f"[ConfigManager] バンドル内config.jsonを読み込み: {bundle_config_path}")
                 loaded_base = True
             except Exception as e:
-                logger.warning(f"[ConfigManager] バンドル内config.jsonの読み込み失敗: {e}")
+                logger.warning(f"[ConfigManager] バンドル内config.jsonの読み込み失敗: {bundle_config_path} - {e}") # パスもログに追加
         else:
-            logger.info(f"[ConfigManager] バンドル内config.jsonが見つかりません: {bundle_config_path}")
-        # 2. ユーザー設定の読み込み
+            logger.info(f"[ConfigManager] Bundled config not found at expected location: {bundle_config_path}")
+            # Provide more context in the log
+            if getattr(sys, 'frozen', False):
+                logger.info(f"[ConfigManager] (Running bundled, expected alongside {sys.executable})")
+            else:
+                 logger.info(f"[ConfigManager] (Running from source, expected in project root: {exe_dir})")
+
+        # 3. ユーザー設定の読み込み
         if self.config_file_path.exists():
             try:
                 with open(self.config_file_path, 'r', encoding='utf-8') as f:
@@ -234,12 +251,22 @@ class ConfigManager:
                 logger.info(f"[ConfigManager] ユーザー設定config.jsonを読み込み: {self.config_file_path}")
                 loaded_user = True
             except Exception as e:
-                logger.warning(f"[ConfigManager] ユーザー設定config.jsonの読み込み失敗: {e}")
+                logger.warning(f"[ConfigManager] ユーザー設定config.jsonの読み込み失敗: {self.config_file_path} - {e}") # パスもログに追加
         else:
-            logger.info(f"[ConfigManager] ユーザー設定config.jsonが見つかりません: {self.config_file_path}")
-        # 3. マージ
+            # No need to log if user config doesn't exist, it's normal
+            # logger.info(f"[ConfigManager] ユーザー設定config.jsonが見つかりません: {self.config_file_path}")
+            pass # Simply proceed without user config
+
+        # 4. マージ (デフォルト -> バンドル -> ユーザー)
         self.config = {**default_config, **base_config, **user_config}
-        logger.info(f"[ConfigManager] 設定マージ順序: デフォルト→バンドル→ユーザー。最終設定: {list(self.config.keys())}")
+        
+        # Log loaded keys AFTER merge
+        merged_keys = list(self.config.keys())
+        source_log = []
+        if loaded_base: source_log.append("Bundled")
+        if loaded_user: source_log.append("User")
+        if not source_log: source_log.append("Default only")
+        logger.info(f"[ConfigManager] Config loaded. Sources: {', '.join(source_log)}. Final keys: {merged_keys}")
 
     def save(self):
         """Saves the current configuration to the JSON file."""
