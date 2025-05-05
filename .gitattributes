@@ -3,6 +3,5 @@
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.icns filter=lfs diff=lfs merge=lfs -text
-assets/ffmpeg/**/* filter=lfs diff=lfs merge=lfs -text
 assets/ffmpeg/win/ffmpeg.exe filter=lfs diff=lfs merge=lfs -text
 assets/ffmpeg/win/ffprobe.exe filter=lfs diff=lfs merge=lfs -text

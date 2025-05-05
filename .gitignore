@@ -189,13 +189,11 @@ generate_fernet_key.py
 doc/
 CCBP_old/
 .ruff_cache/
-.cursor/
 gas/
 nuitka_dist_macos/
 tests/
 validation_output/
 TemplateA/
 scripts/
-windows_build_old.yml
 README.md
 DEVELOPMENT.md
