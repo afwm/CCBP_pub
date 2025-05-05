@@ -38,6 +38,15 @@ jobs:
         echo "--- Checking assets/ffmpeg/win/ after git lfs pull ---"
         ls -lR assets/ffmpeg/win/ || echo "Directory assets/ffmpeg/win/ not found or ls failed."
         echo "-------------------------------------------------------"
+        # ここでffmpeg.exe/ffprobe.exeがなければエラーで終了
+        if [ ! -f assets/ffmpeg/win/ffmpeg.exe ]; then
+          echo "ERROR: assets/ffmpeg/win/ffmpeg.exe not found after LFS pull." >&2
+          exit 1
+        fi
+        if [ ! -f assets/ffmpeg/win/ffprobe.exe ]; then
+          echo "ERROR: assets/ffmpeg/win/ffprobe.exe not found after LFS pull." >&2
+          exit 1
+        fi
       shell: bash
 
     - name: Set up Python
