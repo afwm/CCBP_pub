@@ -221,67 +221,34 @@ class ConfigManager:
         is_frozen = getattr(sys, 'frozen', False)
         logger.debug(f"[ConfigManager] Environment check: sys.frozen = {is_frozen}")
 
-        # 1. Determine the path for the bundled config file
+        # --- OSごとにバンドル探索ロジックを分岐 ---
         bundle_config_path = None
-        determined_bundle_path = None # Store the first path we intend to check
-        try:
-            # --- First, always try path relative to the executable ---
-            # This handles both frozen executables and running the bundled python.exe
-            exe_path = Path(sys.executable).resolve()
-            exe_dir = exe_path.parent
-            logger.debug(f"[ConfigManager] Checking near executable: {exe_path}")
-
-            if sys.platform == "darwin" and is_frozen:
-                # On macOS .app bundles, data files are typically in Contents/Resources
-                potential_resources_dir = exe_dir.parent / "Resources"
-                if potential_resources_dir.is_dir():
-                     determined_bundle_path = potential_resources_dir / CONFIG_FILENAME
-                     logger.debug(f"[ConfigManager] macOS bundle detected. Determined Resources path: {determined_bundle_path}")
-                else:
-                     determined_bundle_path = exe_dir / CONFIG_FILENAME # Fallback
-                     logger.warning(f"[ConfigManager] macOS bundle structure not standard? Determined exe dir path: {determined_bundle_path}")
-            else:
-                # Windows/Linux standalone OR running bundled python.exe: Check alongside executable
+        if sys.platform == "win32":
+            # Windows: exe直下のconfig.jsonを最優先
+            try:
+                exe_path = Path(sys.executable).resolve()
+                exe_dir = exe_path.parent
                 determined_bundle_path = exe_dir / CONFIG_FILENAME
-                logger.debug(f"[ConfigManager] Checking executable directory path: {determined_bundle_path}")
-
-            # Check if the primary path exists
-            if determined_bundle_path and determined_bundle_path.exists():
-                 bundle_config_path = determined_bundle_path # Use this path
-            # --- If primary path not found AND not frozen, try dev path as fallback --- 
-            elif not is_frozen:
-                 logger.debug(f"[ConfigManager] Bundled config not found near executable ({determined_bundle_path}). Trying development path assumption.")
-                 # Development environment fallback: Assume project root is 2 levels above this file
-                 try:
-                     project_root = Path(__file__).resolve().parents[2]
-                     dev_bundle_path = project_root / CONFIG_FILENAME
-                     logger.debug(f"[ConfigManager] Running from source assumption. Checking project root path: {dev_bundle_path}")
-                     # Only use the dev path if it actually exists
-                     if dev_bundle_path.exists():
-                          bundle_config_path = dev_bundle_path # Use the dev path
-                          logger.info(f"[ConfigManager] Found config via development path: {bundle_config_path}")
-                     else:
-                          logger.warning(f"[ConfigManager] Development path config not found either: {dev_bundle_path}")
-                          # Keep determined_bundle_path (which is None or non-existent) for logging below
-                          bundle_config_path = determined_bundle_path
-                 except IndexError:
-                      logger.error("[ConfigManager] Cannot determine project root from __file__ for dev path.")
-                      bundle_config_path = determined_bundle_path # Keep original for logging
-                 except Exception as dev_e:
-                      logger.error(f"[ConfigManager] Error calculating development path: {dev_e}", exc_info=True)
-                      bundle_config_path = determined_bundle_path # Keep original for logging
-            else:
-                # If frozen and not found at primary path, bundle_config_path remains None or non-existent path
-                bundle_config_path = determined_bundle_path
-
-        except Exception as e:
-            logger.error(f"[ConfigManager] Error determining bundled config path: {e}", exc_info=True)
-            # Attempt fallback to CWD if path determination failed completely
-            if bundle_config_path is None:
-                 bundle_config_path = Path.cwd() / CONFIG_FILENAME
-                 logger.warning(f"[ConfigManager] Falling back to CWD for bundled config path: {bundle_config_path}")
-
-        logger.info(f"[ConfigManager] Final path determined for bundled config check: {bundle_config_path}") # Log the path we WILL check
+                logger.debug(f"[ConfigManager] [Windows] Checking executable directory path: {determined_bundle_path}")
+                if determined_bundle_path.exists():
+                    bundle_config_path = determined_bundle_path
+            except Exception as e:
+                logger.error(f"[ConfigManager] [Windows] Error determining bundled config path: {e}", exc_info=True)
+        elif sys.platform == "darwin":
+            # Mac: バンドルconfig.jsonは無視し、ユーザーディレクトリのみ
+            logger.info("[ConfigManager] [macOS] Skipping bundled config.json. Will use only user config.")
+            bundle_config_path = None
+        else:
+            # Linux/その他: 既存ロジックを維持
+            try:
+                exe_path = Path(sys.executable).resolve()
+                exe_dir = exe_path.parent
+                determined_bundle_path = exe_dir / CONFIG_FILENAME
+                logger.debug(f"[ConfigManager] [Other] Checking executable directory path: {determined_bundle_path}")
+                if determined_bundle_path.exists():
+                    bundle_config_path = determined_bundle_path
+            except Exception as e:
+                logger.error(f"[ConfigManager] [Other] Error determining bundled config path: {e}", exc_info=True)
 
         # 2. Try loading bundled config (using the determined bundle_config_path)
         if bundle_config_path and bundle_config_path.exists():
@@ -293,18 +260,16 @@ class ConfigManager:
                     base_config = json.load(f)
                 logger.info(f"[ConfigManager] Successfully loaded bundled config from: {bundle_config_path}")
                 loaded_base = True
-                # ADDED: Log the API URL loaded from bundle if present
                 if KEY_LICENSE_API_URL in base_config:
-                     logger.info(f"[ConfigManager] API URL found in bundled config: '{base_config.get(KEY_LICENSE_API_URL)}'") # Use get for safety
+                    logger.info(f"[ConfigManager] API URL found in bundled config: '{base_config.get(KEY_LICENSE_API_URL)}'")
                 else:
-                     logger.warning(f"[ConfigManager] '{KEY_LICENSE_API_URL}' not found in the loaded bundled config.")
-                # END ADDED
+                    logger.warning(f"[ConfigManager] '{KEY_LICENSE_API_URL}' not found in the loaded bundled config.")
             except Exception as e:
                 logger.warning(f"[ConfigManager] Failed to read/parse bundled config file: {bundle_config_path} - {e}", exc_info=True)
         elif bundle_config_path:
-            logger.error(f"[ConfigManager] CRITICAL: Bundled config file *NOT FOUND* at expected location: {bundle_config_path}") # More critical logging
+            logger.error(f"[ConfigManager] CRITICAL: Bundled config file *NOT FOUND* at expected location: {bundle_config_path}")
         else:
-             logger.error("[ConfigManager] CRITICAL: Could not determine a valid path for the bundled config file.")
+            logger.info("[ConfigManager] No bundled config.json used for this platform.")
 
         # 3. Load user config
         user_config = {}
@@ -319,17 +284,16 @@ class ConfigManager:
             except Exception as e:
                 logger.warning(f"[ConfigManager] Failed to load user config: {self.config_file_path} - {e}", exc_info=True)
         else:
-             logger.debug(f"[ConfigManager] User config not found (this is normal on first run): {self.config_file_path}")
+            logger.debug(f"[ConfigManager] User config not found (this is normal on first run): {self.config_file_path}")
 
-        # Merge (Default -> Bundled -> User) - no changes needed here
-        default_config = self._get_default_config() # Get fresh default config
+        # Merge (Default -> Bundled -> User)
+        default_config = self._get_default_config()
         logger.debug(f"[ConfigManager] Merging config sources...")
         logger.debug(f"[ConfigManager] Keys from Default: {list(default_config.keys())}")
         logger.debug(f"[ConfigManager] Keys from Bundled: {list(base_config.keys())}")
         logger.debug(f"[ConfigManager] Keys from User: {list(user_config.keys())}")
         self.config = {**default_config, **base_config, **user_config}
 
-        # Log final keys and source summary - no changes needed here
         merged_keys = list(self.config.keys())
         source_log = []
         if loaded_base: source_log.append("Bundled")
@@ -339,11 +303,11 @@ class ConfigManager:
         final_api_url = self.config.get(KEY_LICENSE_API_URL)
         logger.info(f"[ConfigManager] Final '{KEY_LICENSE_API_URL}' after merge: '{final_api_url}'")
         if not final_api_url and loaded_base and KEY_LICENSE_API_URL in base_config and base_config.get(KEY_LICENSE_API_URL):
-             logger.error(f"[ConfigManager] CRITICAL: API URL was present in bundle but is missing after merge! Check user config overwrite.")
+            logger.error(f"[ConfigManager] CRITICAL: API URL was present in bundle but is missing after merge! Check user config overwrite.")
         elif not final_api_url and not loaded_base:
-             logger.error(f"[ConfigManager] CRITICAL: API URL is missing because bundled config was not loaded.")
+            logger.error(f"[ConfigManager] CRITICAL: API URL is missing because bundled config was not loaded.")
         elif not final_api_url:
-             logger.error(f"[ConfigManager] CRITICAL: API URL is missing for an unknown reason after merge.")
+            logger.error(f"[ConfigManager] CRITICAL: API URL is missing for an unknown reason after merge.")
 
     def save(self):
         """Saves the current configuration to the user's JSON file, excluding sensitive build-time keys."""
